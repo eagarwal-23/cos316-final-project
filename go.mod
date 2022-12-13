@@ -1,5 +1,5 @@
-module cos316.princeton.edu/assignment4
+module cos316.princeton.edu/assignment3
 
-go 1.18
+go 1.17
 
-require github.com/mattn/go-sqlite3 v1.14.10
+require github.com/emirpasic/gods v1.18.1 // indirect

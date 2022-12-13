@@ -1,313 +1,168 @@
-# COS316, Assignment 4: Dopey Object Relational Mapper (DORM)
+# COS316, Assignment 3: In-Memory Cache
 
-# Dopey Object Relational Mapper (DORM)
+# In-Memory Cache
 
-This assignment asks you to build a generic Object Relational Mapper (ORM). An
-ORM translates language-level objects---Go structs in our case---to and from a
-"relational mapping"---a SQLite database in our case. This allows application
-developers to use normal language constructs and idioms to manipulate data
-stored in a database.
-
-For example, an application that keeps track of posts by different users might
-have a Go struct modeling each post:
-
-```go
-type Post struct {
-    ID     int64
-    Author string
-    Posted time.Time
-    Likes  int
-    Body   string
-}
-```
-
-If we want to store this in a SQL database, the schema might look like:
-
-```sql
-create table post (
-    id integer primary key autoincrement,
-    author text,
-    posted timestamp,
-    likes integer,
-    body text
-)
-```
-
-where `id` is a primary key that is auto-incremented by 1 for each new record
-(tuple) inserted into the table named `post`.
-
-An object relational mapper (ORM) allows an application developer to "talk" to the
-database through the Go struct:
-
-```go
-// Create a new post
-post1 := &Post{
-    Author: "alevy",
-    Posted: time.Now(),
-    Likes: 0,
-    Body: "Hello fellow kids! This post will surely be viral"
-}
-
-// Insert the record into the database
-dorm.Create(post1)
-...
-
-// Get and display all posts
-allPosts := []Post{}
-dorm.Find(&allPosts)
-
-for _, post := range allPosts {
-    fmt.Printf("%s said: %s\n", post.Author, post.Body)
-}
-```
-
-In this assignment you'll build a simple ORM for mapping Go structs to a
-SQLite database that can add new rows from a struct, fetch all rows of a given
-type, and fetch the first row of a given type, if it exists.
-
-You will also implement some helper functions to analyze provided structs and
-return a string or strings representing the named fields of that struct.
+In this project, you will build an in-memory, look-aside, write-allocate cache.
+You will implement two eviction algorithms: first-in first-out (FIFO) and
+least-recently-used (LRU). Each of these implementations adheres to an abstract
+interface provided to you, called `Cache`.
 
 ## API
 
-The `dorm` package exposes the following API:
+A cache is a fixed-size store of key-value bindings. In your cache, keys are
+strings (e.g., the name of a file or variable), and values are arbitrary-length
+byte slices.
+
+Because the cache is fixed-size, it *cannot* grow to accept arbitrarily many
+keys and values. We initialize a cache with a `limit` parameter that defines
+precisely how many bytes worth of keys and values it can accommodate.
+
+Instead of growing, once the cache becomes too full, we must **evict**
+some item that is already in the cache before we are able to **admit** new
+values to the cache.
+
+The mechanism by which we decide which items to remove from the cache is
+known as an **eviction algorithm**, which we will cover later in this document.
+
+A general-purpose `Cache` interface is defined by the following functions.
+Any type that implements these functions is automatically able to be used as
+a `Cache` type in Golang.
+
+This interface is defined in `cache.go`. You should examine this file and
+understand its purpose.
 
 ```go
-type DB struct {
-	inner *sql.DB
+type Cache interface {
+	// Get returns the value associated with the given key, if it exists.
+	// This operation counts as a "use" for that key-value pair
+	// ok is true if a value was found and false otherwise.
+	Get(key string) (value []byte, ok bool)
+
+	// Remove removes and returns the value associated with the given key, if it exists.
+	// ok is true if a value was found and false otherwise
+	Remove(key string) (value []byte, ok bool)
+
+	// Set associates the given value with the given key, possibly evicting values
+	// to make room. Returns true if the items was added successfully, else false.
+	Set(key string, value []byte) bool
+
+	// Len returns the number of items in the cache.
+	Len() int
+
+	// MaxStorage returns the maximum number of bytes this cache can store
+	MaxStorage() int
+
+	// RemainingStorage returns the number of unused bytes available in this cache
+	RemainingStorage() int
+
+	// Stats returns a pointer to a Stats object that indicates how many hits
+	// and misses this cache has resolved over its lifetime.
+	Stats() *Stats
 }
-
-// NewDB returns a new DB using the provided `conn`,
-// an sql database connection.
-// This function is provided for you. You DO NOT need to modify it.
-func NewDB(conn *sql.DB) DB
-
-// Close closes db's database connection.
-// This function is provided for you. You DO NOT need to modify it.
-func (db *DB) Close() error
-
-// ColumnNames analyzes a struct, v, and returns a list of strings,
-// one for each of the public fields of v.
-// The i'th string returned should be equal to the name of the i'th
-// public field of v, converted to underscore_case.
-// Refer to the specification of underscore_case, below.
-
-// Example usage:
-// type MyStruct struct {
-//    ID int64
-//    UserName string
-// }
-// ColumnNames(&MyStruct{})    ==>   []string{"id", "user_name"}
-func ColumnNames(v interface{}) []string
-
-// TableName analyzes a struct, v, and returns a single string, equal
-// to the name of that struct's type, converted to underscore_case.
-// Refer to the specification of underscore_case, below.
-
-// Example usage:
-// type MyStruct struct {
-//    ...
-// }
-// TableName(&MyStruct{})    ==>  "my_struct"
-func TableName(result interface{}) string
-
-// The function Find queries a database for all rows in a given table,
-// and stores all matching rows in the slice provided as an argument.
-// Find should panic if the table doesn't exist.
-
-// The argument `result` will be a pointer to an empty slice of models.
-// To be explicit, it will have type *[]MyStruct,
-// where MyStruct is any arbitrary struct subject to the restrictions
-// discussed later in this document.
-// You may assume the slice referenced by `result` is empty.
-
-// Example usage to find all UserComment entries in the database:
-//    type UserComment struct = { ... }
-//    result := []UserComment{}
-//    db.Find(&result)
-func (db *DB) Find(result interface{})
-
-// The function First queries a database for the first row in a table
-// and stores the matching row in the struct provided as an argument.
-// If no such entry exists, First returns false; otherwise it returns true.
-// First should panic if the table doesn't exist.
-
-// The argument `result` will be a pointer to a model.
-// To be explicit, it will have type *MyStruct,
-// where MyStruct is any arbitrary struct subject to the restrictions
-// discussed later in this document.
-
-// Example usage to find the first UserComment entry in the database:
-//    type UserComment struct = { ... }
-//    result := &UserComment{}
-//    ok := db.First(result)
-func (db *DB) First(result interface{}) bool
-
-// Create adds the specified model to the appropriate database table.
-// The table for the model *must* already exist, and Create() should
-// panic if it does not.
-
-// The argument `model` will be a pointer to a model.
-// To be explicit, it will have type *MyStruct,
-// where MyStruct is any arbitrary struct subject to the restrictions
-// discussed later in this document.
-
-// Optionally, at most one of the fields of the provided `model`
-// might be annotated with the tag `dorm:"primary_key"`. If such a
-// field exists, Create() should ignore the provided value of that
-// field, overwriting it with the auto-incrementing row ID.
-// This ID is given by the value of last_inserted_rowid(),
-// returned from the underlying sql database.
-
-// Example usage to add a new user row to the database:
-//    type User struct = {
-//        Name string
-//        ID   int64 `dorm:"primary_key"`
-//    }
-//    user := &User{Name: "NAME", ID: 20}
-//    db.Create(user)
-//    user.ID should now be updated to last_inserted_rowid()
-func (db *DB) Create(model interface{})
 ```
 
-You will be required to implement the following functions:
-`TableName()`, `ColumnNames()`,  `Find()`, `First()`, `Create()`.
+### First-in First-out (FIFO) Eviction
 
-The functions `NewDB` and `Close` are provided for you.
-There is no need to modify these functions for your implementation,
-although you are welcome to if it will help your implementation.
+For the first part of the assignment, you will be implementing a cache using a
+first-in first-out eviction algorithm.
 
-### CamelCase and Underscore Case Specification
+This will require you to modify the file `fifo.go`. 
+Unit testing should be done in `fifo_test.go`.
 
-You will need to devise a way to convert between `camelCase` identifiers (structs in Go)
-and `underscore_case` identifiers (columns in SQL). This conversion should apply whenever
-your Go program interacts directly with the SQL database. You may find the
-[strings](https://golang.org/pkg/strings/) package useful.
+FIFO eviction means that if there is not enough space in the cache for a new
+item, the cache evicts items one at a time until there is enough
+room, starting with the item that was added to the cache first (i.e. the
+oldest item presently in the cache), then the item that was added to the cache 
+second (i.e. the second-oldest item in the cache), and so on.
 
-Below is a formal specification of `CamelCase` and `underscore_case`:
+### Least Recently Used (LRU) Eviction
 
-#### CamelCase
-In CamelCase, we define a "word" to be either:
-1.  any sequence of uppercase letters that is *not* followed
-    by a non-uppercase character.
-2.  a capitalized word (one uppercase letter followed by any number
-    of non-uppercase characters)
-3.  an initial sequence of non-uppercase characters.
+For the second part of the assignment, you will be implementing a cache using a
+least recently used eviction algorithm.
 
-For our purposes, uppercase letters are as defined by
-[unicode.IsUpper](https://golang.org/pkg/unicode/#IsUpper).
+This will require you to modify the file `lru.go`.
+Unit testing should be done in `lru_test.go`.
 
-Consider the following examples, with CamelCase identifiers on the
-left, and their component words on the right.
+LRU eviction means that if there is not enough space in the cache for a new
+item, the cache evicts items one at a time until there is enough room,
+starting with the item that was *used* by a client least recently. An item
+is considered *used* any time it is the object of a `Get()` or `Set()` call.
 
-```
-CamelCase     ==>    ["Camel", "Case"]
-EMail         ==>    ["E", "Mail"]
-COSFiles      ==>    ["COS", "Files"]
-camelCase     ==>    ["camel", "Case"]
-OldCOSFiles   ==>    ["Old", "COS", "Files"]
-COSFilesX     ==>    ["COS", "Files", "X"]
-```
+## Additional Specifications
 
-Non-alphabetical characters like numbers will never cause a word split.
-In other words, you may consider them 'non-uppercase characters' for
-the purposes of the definitions above.
+* *What sorts of keys and values are acceptable?*
+  Keys can be any valid Go string and items
+  Note that the empty string is an acceptable key for an item. Likewise,
+  the empty byte slice is an acceptable value. The `nil` byte slice is also an
+  acceptable value for an item.
 
-#### Underscore_Case
+* *What does the `ok` return value signify?*
+  Your cache should use `ok=true` to indicate that the requested operation
+  executed successfully, or `ok=false` to indicate some issue.
+  For example, if `Get()` or `Remove()` returns `ok=false`, it may mean that
+  no item exists for the requested key.
 
-Underscore case consists of a sequence of lowercased words joined
-together by underscores. All of the names of tables and columns in your
-database will be in underscore_case, which means you will need to translate
-Golang's CamelCase identifiers to underscore_case identifiers.
+* *If `ok` is false, what should the other returned value be?*
+  If `Get()` or `Remove()` returns `false` as its second return value, clients
+  should assume that the first return value is invalid, and its specific value
+  is therefore not relevant. In this case, it would be reasonable to return `nil`,
+  but you are not required to do so.
 
-We recommend mapping a CamelCase identifier to a list of component words,
-and then lowercasing and joining the words together to obtain
-your underscore case identifier.
+* *How much memory does an item consume?*
+  For this assignment, assume that the memory consumed by an item is precisely
+  `len(key) + len(value)`. In practice, simply counting the number of bytes in a
+  string and the number of entries in a byte array is not sufficient since the
+  data structures you use to store the items almost certainly incur overhead,
+  such as the size of the pointers to a key or value. However, we ignore these
+  factors for the assignment to make testing simpler.
 
-### Restrictions on Structs
+* *What if an item could never fit into a cache?* You may encounter situations
+  where a client requests adding an item that is larger than the maximum
+  capacity of the cache. In these cases, `Set()` should return `false` to
+  indicate the binding was not admitted to the cache, and the contents of the
+  cache should be left unmodified.
 
-For the purposes of this assignment, we will make several simplifying
-assumptions about the sorts of structs that make valid DB models.
+## Performance
 
-In particular:
-* You may assume that the fields of structs will all be primitive types
-  (e.g. `string`, `int`, `int64`, `bool`, ...). This means you need not
-  worry about `map`, `slice`, or `struct` types being included as
-  fields.
-  Primitive types are handled natively by the `sql` library we are
-  using, so you should *not* have to do any special work to support
-  these types. In contrast, `map`, `slice`, or nested `struct` types
-  add complexity to the ORM implementation, so you are not responsible
-  for supporting them.
-* You may assume there will be no nested structs. For example, your
-  implementation will not be tested against a model like the following:
-  ```golang
-  type StudentData struct {
-    Name string
-    ID int64
-    Enrolled bool
-  }
+* Your implementation should be memory-efficient in the sense that it evicts
+  values from the cache only as a last resort. If it is possible to store a
+  binding in the cache without evicting another, your implementation must do so.
 
-  type Roster struct {
-    FirstStudent StudentData
-    NumStudents int
-    OtherStudents []StudentData
-  }
-  ```
-* You may assume that all field names will be in a valid `camelCase` or
-  `CamelCase` format. You may assume the same of all named struct types.
-  Consider the following examples:
+* Your implementation should be time-efficient. Specifically, `Get`, `Set`,
+  `Len()` and `Stats()` should be constant-time in the number of items in the
+  cache. Carefully consider the data structures you use to implement FIFO and
+  LRU.  For example, iterating over all items in the cache to find the
+  oldest/least-recently used will *not* be acceptably fast when the cache is
+  large.
 
-  ```golang
-  type CamelCase struct {...}   // OK - valid camel case
-  type camelCase struct {...}   // OK - valid camel case
-  type camel_case struct {...}  // NOT OK - no underscores in camel case
-  type CAMEL_CASE struct {...}  // NOT OK - no underscores in camel case
-  ```
+## A Note on External Libraries
 
-### Additional specifications
+* Your code may use any data structures that have been implemented in the Go
+  standard libraries, or any data structures that you implement yourself from
+  scratch, but you may not use data structures defined in third-party
+  libraries. Your code must not rely on any existing LRU or FIFO implementation,
+  regardless of where it came from.
 
-* `First()` should return the first row in a table based on the table's
-  natural order. That is, your `First()` should respect the order of
-  rows as returned by the underlying SQL database.
-* In the event that a table contains zero rows, `First()` must return
-  false, and the value `First()` assigns to its argument `result`
-  is unspecified. Your implementation may leave `result` unchanged, or
-  assign it some other reasonable default value.
-* None of the functions are responsible for creating new tables.
-  If `Find()`, `First()` or `Create()` attempt to access a table that does not exist,
-  they should panic with an explanatory error message.
-  You can use Go's `panic(...)` function to do this.
-* If any of the fields of the `model` provided to `Create()` are
-  tagged with `dorm:"primary_key"`, you should assume that the type
-  of that field will be `int64`.
-
-## SQL Resources
-
-As part of this assignment, you will need to write code that composes SQL
-queries. We recommend you consult the
-[SQL precept slides](https://cos316.princeton.edu/precepts/SQL.pdf) or
-[SQLite documentation](https://www.sqlite.org/index.html) for a refresher on
-how you might accomplish this.
-
-You may also find the golang
-[database/sql](https://golang.org/pkg/database/sql/) library useful.
-
-As always, you are free to use the internet and any other resources you would
-like to learn more information about SQL.
-
-## Unit testing
+## Unit Testing
 
 Recall Go uses the [testing package](https://golang.org/pkg/testing/) to create
 unit tests for Go packages.
 
-For this assignment, you are provided with dorm_test.go, which contains very
-basic unit tests. You are encouraged to extend this file to create your own
-unit tests.
+For this assignment, you are provided with several files:
+* `helpers_test.go` contains useful helper functions you may use (or modify)
+  for debugging purposes, or to help creating your own tests.
+* `fifo_test.go` contains a very basic unit test for your first-in first-out
+  cache. You are encouraged to extend this file to create your own unit tests.
+* `lru_test.go` contains a very basic unit test for your least recently used
+  cache. You are encouraged to extend this file to create your own unit tests.
 
-## Sample Application
+Read through all three files and try to understand how and why they work the
+way that they do.  Hopefully, it will give you some ideas you can build off of
+to create more comprehensive tests.
 
-A sample application, based on the example above, is provided in example/main.go
+You can run your unit tests with the command `go test`, which simply reports the
+result of the test, and the reason for failure, if any, or you may add the `-v`
+flag to see the verbose output of the unit tests.
 
 ## Submission & Grading
 
@@ -315,9 +170,9 @@ Your assignment will be automatically submitted every time you push your changes
 to your GitHub repo. Within a couple minutes of your submission, the
 autograder will make a comment on your commit listing the output of our testing
 suite when run against your code. **Note that you will be graded only on your
-changes to the `dorm` package**, and not on your changes to any other files,
+changes to the `cache` package**, and not on your changes to any other files,
 though you may modify any files you wish.
 
 You may submit and receive feedback in this way as many times as you like,
-whenever you like, but a substantial lateness penalty will be applied to
-submissions past the deadline.
+whenever you like, taking into account your late days if submitting past the 
+deadline. 
