@@ -143,6 +143,9 @@ func (lru *LRU) Empty() {
 }
 
 func (lru *LRU) Evict() (key string, ok bool) {
+	if (lru.Len() == 0) {
+		return "", false
+	}
 	// Last element of list
 
 	elem := (lru.cachedList).Back()
