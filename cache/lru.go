@@ -35,6 +35,14 @@ func (lru *LRU) RemainingStorage() int {
 	return lru.capacity - lru.currentlyUsedCapacity
 }
 
+// Peek returns the value associated with the given key, if it exists.
+// This operation does not counts as a "use" for that key-value pair
+// ok is true if a value was found and false otherwise.
+func (lru *LRU) Peek(key string) (value []byte, ok bool) {
+	currMapping, ok := lru.cachedValues[key]
+	return currMapping.value, ok
+}
+
 // Get returns the value associated with the given key, if it exists.
 // This operation counts as a "use" for that key-value pair
 // ok is true if a value was found and false otherwise.
@@ -126,6 +134,12 @@ func (lru *LRU) Set(key string, value []byte) bool {
 	// Increase currentlyUsedCapacity to reflect currentObjectSize
 	lru.currentlyUsedCapacity += currentObjectSize
 	return true
+}
+
+func (lru *LRU) Empty() {
+	lru.cachedValues = make(map[string]mapping)
+	lru.cachedList = *list.New()
+	lru.currentlyUsedCapacity = 0
 }
 
 func (lru *LRU) Evict() bool {
