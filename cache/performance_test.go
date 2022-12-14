@@ -8,7 +8,7 @@ import (
 	//"testing"
 	"crypto/rand"
 	"testing"
-	//"time"
+	"time"
 	"math/big"
 	"math"
 	"strconv"
@@ -25,9 +25,11 @@ func getRand(tb testing.TB) int64 {
 	return out.Int64()
 }
 
+// Small benchmark test to compare lru and arc
 func BenchmarkARC_Rand(b *testing.B) {
 	capacity := 30
-	l := NewArc(capacity)
+	arc := NewArc(capacity)
+	lru := NewLru(capacity)
 	
 
 	trace := make([]int64, b.N*2)
@@ -37,18 +39,42 @@ func BenchmarkARC_Rand(b *testing.B) {
 
 	b.ResetTimer()
 
-	var hit, miss int
+	var hits_arc, misses_arc int
+	start_arc := time.Now()
 	for i := 0; i < 2*b.N; i++ {
 		s := strconv.Itoa(int(trace[i]))
 		if i%2 == 0 {
-			l.Set(s, []byte(s))
+		  arc.Set(s, []byte(s))
 		} else {
-			if _, ok := l.Get(s); ok {
-				hit++
+			if _, ok := arc.Get(s); ok {
+				hits_arc++
 			} else {
-				miss++
+				misses_arc++
 			}
 		}
 	}
-	b.Logf("hit: %d miss: %d ratio: %f", hit, miss, float64(hit)/float64(miss))
+
+	arc_hit_ratio := float64(hits_arc)/float64(misses_arc)
+	duration_arc := time.Since(start_arc)
+	
+	start_lru := time.Now()
+	var hits_lru, misses_lru int
+	for i := 0; i < 2*b.N; i++ {
+		s := strconv.Itoa(int(trace[i]))
+		if i%2 == 0 {
+		  lru.Set(s, []byte(s))
+		} else {
+			if _, ok := lru.Get(s); ok {
+				hits_lru++
+			} else {
+				misses_lru++
+			}
+		}
+	}
+
+	lru_hit_ratio := float64(hits_lru)/float64(misses_lru)
+	duration_lru := time.Since(start_lru)
+	
+	//b.Logf("hit: %d miss: %d ratio: %f", )
+	b.Logf("LRU hits: %d | LRU misses: %d | LRU ratio: %f, LRU time: %d| ARC hits: %d | ARC misses: %d | ARC ratio: %f, ARC time: %v ", hits_lru, misses_lru, lru_hit_ratio, duration_lru, hits_arc, misses_arc, arc_hit_ratio, duration_arc)
 }

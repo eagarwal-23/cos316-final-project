@@ -10,6 +10,7 @@ package cache
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -599,7 +600,7 @@ func TestRemoveEmptyArc(t *testing.T) {
 	}
 }
 
-// Attempt to Remove() a binding that has already been removed
+// Attempt to Remove() a binding that has already been removed.
 func TestRemoveRemovedArc(t *testing.T) {
 	capacity := 1024
 	arc := NewLru(capacity)
@@ -619,7 +620,8 @@ func TestRemoveRemovedArc(t *testing.T) {
 
 }
 
-func TestARC_Peek(t *testing.T) {
+// Ensures that peek does not update hits and misses as it does not count as an access.
+func TestPeekStatsArc(t *testing.T) {
 	capacity := 64
 	arc := NewLru(capacity)
 	checkCapacity(t, arc, capacity)
@@ -660,4 +662,56 @@ func TestARC_Peek(t *testing.T) {
 			t.FailNow()
 		}
 	}
+}
+
+// Ensures that peek does not change order of recent accesses.
+func TestPeekRecencyArc(t *testing.T) {
+	capacity := 3
+	arc := NewLru(capacity)
+	checkCapacity(t, arc, capacity)
+
+	arc.Set("a", []byte(""))
+	arc.Set("b", []byte(""))
+	arc.Peek("a")
+
+	arc.Set("c", []byte(""))
+
+	_, ok := arc.Get("a")
+
+	if !ok {
+		t.Errorf("should not have updated recent-ness of a. Got %v, Expected %v", ok, false)
+		t.FailNow()
+	}
+
+}
+
+// Ensures that keys on recentLRU that are re-accessed are properly moved to frequentLRU
+func TestGetMoveRecentToFrequentArc(t *testing.T) {
+	capacity := 1024
+	arc := NewArc(capacity)
+
+	for i := 0; i < 256; i++ {
+		//remainingStorageBefore := arc.RemainingStorage()
+		key := fmt.Sprintf("key%d", i)
+		arc.Set(key, make([]byte, 0))
+		fmt.Printf("size %v", len(strconv.Itoa(i)) )
+	}
+
+	// if arc.t1.Len() != 256 {
+	// 	t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), 256)
+	// 	t.FailNow()
+	// }
+
+	// if arc.t2.Len() != 0 {
+	// 	t.Errorf("Recently-used cache t2 has wrong length: %v", arc.t2.Len())
+	// 	t.FailNow()
+	// }
+
+	// arc.Set("a", make([]byte, 0))
+	// if arc.t1.Len() != 1 {
+	// 	t.Errorf("Recently-used cache t1 has wrong length: %v", arc.t1.Len())
+	// 	t.FailNow()
+	// }
+
+
 }
