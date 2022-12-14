@@ -74,10 +74,12 @@ func (arc *ARC) Get(key string) (value []byte, ok bool) {
 // ok is true if a value was found and false otherwise
 func (arc *ARC) Remove(key string) (value []byte, ok bool) {
 	if val, ok := arc.t1.Remove(key); ok {
+		arc.currentlyUsedCapacity -= len(key) + len(val)
 		return val, ok
 	}
 
 	if val, ok := arc.t2.Remove(key); ok {
+		arc.currentlyUsedCapacity -= len(key) + len(val)
 		return val, ok
 	}
 
@@ -93,6 +95,10 @@ func (arc *ARC) Remove(key string) (value []byte, ok bool) {
 
 }
 
+func (arc *ARC) updateCapacity() {
+	arc.currentlyUsedCapacity = arc.t1.currentlyUsedCapacity + arc.t2.currentlyUsedCapacity
+}
+
 // Set associates the given value with the given key, possibly evicting values
 // to make room. Returns true if the binding was added successfully, else false.
 func (arc *ARC) Set(key string, value []byte) bool {
@@ -101,12 +107,14 @@ func (arc *ARC) Set(key string, value []byte) bool {
 	if _, ok := arc.t1.Peek(key); ok {
 		arc.t1.Remove(key)
 		arc.t2.Set(key, value)
+		arc.updateCapacity()
 		return true
 	}
 
 	// If key is already in frequently-used cache t2, then update its corresponding value
 	if _, ok := arc.t2.Peek(key); ok {
 		arc.t2.Set(key, value)
+		arc.updateCapacity()
 		return true
 	}
 
@@ -129,7 +137,7 @@ func (arc *ARC) Set(key string, value []byte) bool {
 		// move key-value pair from b1 into t2
 		arc.b1.Remove(key)
 		arc.t2.Set(key, value)
-
+		arc.updateCapacity()
 	}
 
 	// If key is part of ghost entries recently-evicted from frequently-used list,
@@ -151,6 +159,7 @@ func (arc *ARC) Set(key string, value []byte) bool {
 		// move key-value pair from b2 into t2
 		arc.b2.Remove(key)
 		arc.t2.Set(key, value)
+		arc.updateCapacity()
 	}
 
 	// if not in any of the four
@@ -173,6 +182,7 @@ func (arc *ARC) Set(key string, value []byte) bool {
 		}
 	}
 	arc.t1.Set(key, value)
+	arc.updateCapacity()
 	return true
 }
 
@@ -192,6 +202,7 @@ func (arc *ARC) Replace(key string) {
 			arc.b2.Set(key, emptyVal)
 		}
 	}
+	arc.updateCapacity()
 }
 
 func (arc *ARC) Empty() {
@@ -199,7 +210,7 @@ func (arc *ARC) Empty() {
 	arc.t2.Empty()
 	arc.b1.Empty()
 	arc.b2.Empty()
-	arc.currentlyUsedCapacity = 0
+	arc.updateCapacity()
 }
 
 // Len returns the number of bindings in the ARC.
