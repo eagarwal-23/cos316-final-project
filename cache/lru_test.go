@@ -501,7 +501,7 @@ func TestRemovePreventGetLru(t *testing.T) {
 }
 
 // Check that Remove() correctly updates available storage
-func TestRemoveStorage(t *testing.T) {
+func TestRemoveStorageLru(t *testing.T) {
 	capacity := 1024
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
@@ -571,7 +571,7 @@ func TestStatsLru(t *testing.T) {
 }
 
 // Check that Remove() works as expected on bindings whose values have been overwritten
-func TestRemoveOverwritten(t *testing.T) {
+func TestRemoveOverwrittenLru(t *testing.T) {
 	capacity := 1024
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
@@ -588,7 +588,7 @@ func TestRemoveOverwritten(t *testing.T) {
 }
 
 // Check that Remove() has no effect when called on an empty LRU
-func TestRemoveEmpty(t *testing.T) {
+func TestRemoveEmptyLru(t *testing.T) {
 	capacity := 1024
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
@@ -611,7 +611,7 @@ func TestRemoveEmpty(t *testing.T) {
 }
 
 // Attempt to Remove() a binding that has already been removed
-func TestRemoveRemoved(t *testing.T) {
+func TestRemoveRemovedLru(t *testing.T) {
 	capacity := 1024
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
@@ -673,3 +673,4 @@ func TestLRU_Peek(t *testing.T) {
 	}
 
 }
+

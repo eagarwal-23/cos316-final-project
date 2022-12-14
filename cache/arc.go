@@ -102,6 +102,9 @@ func (arc *ARC) updateCapacity() {
 // Set associates the given value with the given key, possibly evicting values
 // to make room. Returns true if the binding was added successfully, else false.
 func (arc *ARC) Set(key string, value []byte) bool {
+	if len(key)+len(value) > arc.capacity {
+		return false
+	}
 
 	// If the key is in recently-used cache t1, then promote it to t2
 	if _, ok := arc.t1.Peek(key); ok {
