@@ -103,6 +103,8 @@ func (arc *ARC) updateCapacity() {
 // to make room. Returns true if the binding was added successfully, else false.
 func (arc *ARC) Set(key string, value []byte) bool {
 
+	
+
 	// If the key is in recently-used cache t1, then promote it to t2
 	if _, ok := arc.t1.Peek(key); ok {
 		arc.t1.Remove(key)
