@@ -2,6 +2,8 @@ package cache
 
 type Stats struct {
 	Hits   int
+	B1Hits int
+	B2Hits int
 	Misses int
 }
 
@@ -40,7 +42,7 @@ type Cache interface {
 	// the "recently used"-ness of the key.
 	Peek(key string) (value []byte, ok bool)
 
-	Empty() 
+	Empty()
 
 	// Len returns the number of bindings in the cache.
 	Len() int

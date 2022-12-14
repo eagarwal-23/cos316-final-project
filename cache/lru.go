@@ -104,7 +104,7 @@ func (lru *LRU) Set(key string, value []byte) bool {
 		} else if len(currMapping.value) < len(value) {
 			lru.currentlyUsedCapacity -= len(currMapping.value)
 			if lru.capacity-lru.currentlyUsedCapacity < len(value) {
-				if successfulEvict := lru.Evict(); !successfulEvict {
+				if _, successfulEvict := lru.Evict(); !successfulEvict {
 					return false
 				}
 			}
@@ -116,7 +116,7 @@ func (lru *LRU) Set(key string, value []byte) bool {
 	}
 
 	if lru.capacity-lru.currentlyUsedCapacity < currentObjectSize {
-		if successfulEvict := lru.Evict(); !successfulEvict {
+		if _, successfulEvict := lru.Evict(); !successfulEvict {
 			return false
 		}
 	}
@@ -142,15 +142,15 @@ func (lru *LRU) Empty() {
 	lru.currentlyUsedCapacity = 0
 }
 
-func (lru *LRU) Evict() bool {
+func (lru *LRU) Evict() (key string, ok bool) {
 	// Last element of list
 
 	elem := (lru.cachedList).Back()
 	currMapping := elem.Value.(mapping)
 
-	// If key is not found
+	// If key is not found, THEN RETURN WHAT?
 	if _, ok := lru.cachedValues[currMapping.key]; !ok {
-		return false
+		return "", false
 	}
 
 	// If key is found - Delete from map
@@ -164,7 +164,7 @@ func (lru *LRU) Evict() bool {
 	lru.currentlyUsedCapacity -= currentObjectSize
 
 	// Eviction successful
-	return true
+	return currMapping.key, true
 }
 
 // Len returns the number of bindings in the LRU.

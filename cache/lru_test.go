@@ -14,7 +14,6 @@ import (
 	"testing"
 )
 
-
 /******************************************************************************/
 /*                                Constants                                   */
 /******************************************************************************/
@@ -24,7 +23,7 @@ import (
 /*                                  Tests                                     */
 /******************************************************************************/
 
-// Check that NewFIFO() returns an empty FIFO of the correct size
+// Check that NewLru() returns an empty LRU of the correct size
 func TestNewLru(t *testing.T) {
 	capacityArray := [4]int{16, 32, 64, 128}
 
@@ -35,27 +34,27 @@ func TestNewLru(t *testing.T) {
 		// Len() = 0 on init
 		length := lru.Len()
 		if length != 0 {
-			t.Errorf("NewFifo returned wrong length on init. Got %v, Expected %v", 0, length)
+			t.Errorf("NewLru returned wrong length on init. Got %v, Expected %v", length, 0)
 			t.FailNow()
 		}
 
 		// MaxStorage() = 64 on init
 		maxStorage := lru.MaxStorage()
 		if maxStorage != capacity {
-			t.Errorf("NewFifo returned wrong maxStorage on init. Got %v, Expected %v", capacity, maxStorage)
+			t.Errorf("NewLru returned wrong maxStorage on init. Got %v, Expected %v", capacity, maxStorage)
 			t.FailNow()
 		}
 
 		// RemainingStorage() = 64 on init
 		remainingStorage := lru.RemainingStorage()
 		if remainingStorage != capacity {
-			t.Errorf("NewFifo returned wrong remainingStorage on init. Got %v, Expected %v", capacity, remainingStorage)
+			t.Errorf("NewLru returned wrong remainingStorage on init. Got %v, Expected %v", capacity, remainingStorage)
 			t.FailNow()
 		}
 	}
 }
 
-// Check that Get() returns no binding when called on an empty FIFO
+// Check that Get() returns no binding when called on an empty LRU
 func TestGetEmptyLru(t *testing.T) {
 	capacity := 1024
 	keysArray := [4]string{"Hello", "a", "ssup"}
@@ -72,7 +71,7 @@ func TestGetEmptyLru(t *testing.T) {
 	}
 }
 
-// Check that Peek() returns no binding when called on an empty FIFO
+// Check that Peek() returns no binding when called on an empty LRU
 func TestPeekEmptyLru(t *testing.T) {
 	capacity := 1024
 	keysArray := [4]string{"Hello", "a", "ssup"}
@@ -594,7 +593,6 @@ func TestRemoveEmpty(t *testing.T) {
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	
 	_, ok := lru.Remove("key")
 	if ok {
 		t.Errorf("Removed empty binding. Got %v, Expected %v", ok, false)
@@ -631,8 +629,6 @@ func TestRemoveRemoved(t *testing.T) {
 	}
 
 }
-
-
 
 func TestLRU_Peek(t *testing.T) {
 	capacity := 64
