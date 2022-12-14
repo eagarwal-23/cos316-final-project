@@ -3,11 +3,7 @@
  * Author:
  * Usage:    `go test`  or  `go test -v`
  * Description:
- *    An incomplete unit testing suite for lru.go. You are welcome to change
- *    anything in this file however you would like. You are strongly encouraged
- *    to create additional tests for your implementation, as the ones provided
- *    here are extremely basic, and intended only to demonstrate how to test
- *    your program.
+ *    An incomplete unit testing suite for lru.go.
  ******************************************************************************/
 
 package cache
@@ -18,25 +14,6 @@ import (
 	"testing"
 )
 
-/******************************************************************************/
-//METHODS TO TEST
-// MaxStorage() int - DONE - TESTED AT BEGGINING AFTER INIT
-
-// RemainingStorage() int
-
-// Get(key string) (value []byte, ok bool) - TESTED
-
-// Remove(key string) (value []byte, ok bool)
-
-// Set(key string, value []byte) bool
-
-// Peek(key string) (value []byte, ok bool)
-
-// Empty()
-
-// Len() int
-
-// Stats() *Stats
 
 /******************************************************************************/
 /*                                Constants                                   */
@@ -47,7 +24,7 @@ import (
 /*                                  Tests                                     */
 /******************************************************************************/
 
-//Check that NewFIFO() returns an empty FIFO of the correct size
+// Check that NewFIFO() returns an empty FIFO of the correct size
 func TestNewLru(t *testing.T) {
 	capacityArray := [4]int{16, 32, 64, 128}
 
@@ -118,11 +95,10 @@ func TestSingleBindingLru(t *testing.T) {
 	keysArray := [3]string{"Hello", "Foo", "COS"}
 	valuesArray := [3]string{"World", "Bar", "316"}
 
-
-	for i, _:= range keysArray {
+	for i, _ := range keysArray {
 		lru := NewLru(capacitiesArray[i])
 		checkCapacity(t, lru, capacitiesArray[i])
-		lru.Set(keysArray[i],[]byte(valuesArray[i]) )
+		lru.Set(keysArray[i], []byte(valuesArray[i]))
 		value, ok := lru.Get(keysArray[i])
 
 		if ok {
@@ -133,7 +109,7 @@ func TestSingleBindingLru(t *testing.T) {
 			}
 		} else {
 			t.Errorf("Expected value but did not get one")
-				t.FailNow()
+			t.FailNow()
 		}
 
 		remainingStorage := lru.RemainingStorage()
@@ -143,8 +119,7 @@ func TestSingleBindingLru(t *testing.T) {
 			t.FailNow()
 		}
 	}
-	
-	
+
 }
 
 // Add 20 bindings to an LRU, checking each one consumes the right storage
@@ -154,7 +129,7 @@ func TestStorageLru(t *testing.T) {
 	checkCapacity(t, lru, capacity)
 
 	for i := 0; i < 20; i++ {
-		remainingStorageBefore := lru.RemainingStorage() 
+		remainingStorageBefore := lru.RemainingStorage()
 		key := fmt.Sprintf("key%d", i)
 		val := []byte(key)
 		ok := lru.Set(key, val)
@@ -162,7 +137,7 @@ func TestStorageLru(t *testing.T) {
 			t.Errorf("Failed to add binding with key: %s", key)
 			t.FailNow()
 		}
-		remainingStorageAfter := lru.RemainingStorage() 
+		remainingStorageAfter := lru.RemainingStorage()
 
 		expectedremainingStorageAfter := remainingStorageBefore - (len(key) + len(val))
 		if remainingStorageAfter != expectedremainingStorageAfter {
@@ -212,7 +187,7 @@ func TestSetTooLargeLru(t *testing.T) {
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("123456",[]byte("123456")) 
+	ok := lru.Set("123456", []byte("123456"))
 	if ok {
 		t.Errorf("Failed to reject binding too large for LRU. Set  Got %v, Expected %v", ok, false)
 		t.FailNow()
@@ -221,7 +196,7 @@ func TestSetTooLargeLru(t *testing.T) {
 		t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 10)
 		t.FailNow()
 	}
-	_, ok = lru.Get("123456") 
+	_, ok = lru.Get("123456")
 	if ok {
 		t.Errorf("Failed to reject binding too large for LRU. Set  Got %v, Expected %v", ok, false)
 		t.FailNow()
@@ -235,30 +210,30 @@ func TestSetZeroLru(t *testing.T) {
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("hello",[]byte("world")) 
+	ok := lru.Set("hello", []byte("world"))
 	if ok {
 		t.Errorf("Failed to reject binding too large for LRU. Set  Got %v, Expected %v", ok, false)
 		t.FailNow()
 	}
-	ok = lru.Set("foo",[]byte("boo")) 
+	ok = lru.Set("foo", []byte("boo"))
 	if ok {
 		t.Errorf("Failed to reject binding too large for LRU. Set  Got %v, Expected %v", ok, false)
 		t.FailNow()
 	}
-	ok = lru.Set("",[]byte("")) 
+	ok = lru.Set("", []byte(""))
 	if !ok {
-		t.Errorf("Failed to reject binding too large for LRU. Set  Got %v, Expected %v", ok,  true)
+		t.Errorf("Failed to reject binding too large for LRU. Set  Got %v, Expected %v", ok, true)
 		t.FailNow()
 	}
 }
 
-//  Check that the LRU allows the empty string as a valid key
+// Check that the LRU allows the empty string as a valid key
 func TestEmptyStringValidLru(t *testing.T) {
 	capacity := 1024
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("",[]byte("Value")) 
+	ok := lru.Set("", []byte("Value"))
 	if lru.RemainingStorage() != 1019 {
 		t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 1019)
 		t.FailNow()
@@ -276,21 +251,21 @@ func TestEmptyStringValidLru(t *testing.T) {
 		t.FailNow()
 	}
 
-	value, ok := lru.Get("") 
+	value, ok := lru.Get("")
 	res := bytes.Compare(value, []byte("Value"))
-	if res != 0  {
+	if res != 0 {
 		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("Value"))
 		t.FailNow()
 	}
 }
 
-//   Check that the LRU allows the empty []byte as a valid value
+// Check that the LRU allows the empty []byte as a valid value
 func TestEmptyValidLru(t *testing.T) {
 	capacity := 1024
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("key",[]byte{}) 
+	ok := lru.Set("key", []byte{})
 	if lru.RemainingStorage() != 1021 {
 		t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 1021)
 		t.FailNow()
@@ -308,22 +283,22 @@ func TestEmptyValidLru(t *testing.T) {
 		t.FailNow()
 	}
 
-	value, ok := lru.Get("key") 
+	value, ok := lru.Get("key")
 	res := bytes.Compare(value, []byte{})
-	if res != 0  {
+	if res != 0 {
 		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte{})
 		t.FailNow()
 	}
 
 }
 
-//   Check that the LRU allows the empty []byte as a valid value
+// Check that the LRU allows the empty []byte as a valid value
 func TestNilValidLru(t *testing.T) {
 	capacity := 1024
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("key",nil) 
+	ok := lru.Set("key", nil)
 	if lru.RemainingStorage() != 1021 {
 		t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 1021)
 		t.FailNow()
@@ -341,9 +316,9 @@ func TestNilValidLru(t *testing.T) {
 		t.FailNow()
 	}
 
-	value, ok := lru.Get("key") 
+	value, ok := lru.Get("key")
 	res := bytes.Compare(value, nil)
-	if res != 0  {
+	if res != 0 {
 		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, nil)
 		t.FailNow()
 	}
@@ -356,7 +331,7 @@ func TestBinaryValuesLru(t *testing.T) {
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("key", []byte("\x00\x01�\x15�")) 
+	ok := lru.Set("key", []byte("\x00\x01�\x15�"))
 	if lru.RemainingStorage() != 1012 {
 		t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 1012)
 		t.FailNow()
@@ -374,9 +349,9 @@ func TestBinaryValuesLru(t *testing.T) {
 		t.FailNow()
 	}
 
-	value, ok := lru.Get("key") 
+	value, ok := lru.Get("key")
 	res := bytes.Compare(value, []byte("\x00\x01�\x15�"))
-	if res != 0  {
+	if res != 0 {
 		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("\x00\x01�\x15�"))
 		t.FailNow()
 	}
@@ -389,7 +364,7 @@ func TestUnicodeValuesLru(t *testing.T) {
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("😂_🚀", []byte("✔_🚗")) 
+	ok := lru.Set("😂_🚀", []byte("✔_🚗"))
 	if lru.RemainingStorage() != 1007 {
 		t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 1007)
 		t.FailNow()
@@ -407,15 +382,14 @@ func TestUnicodeValuesLru(t *testing.T) {
 		t.FailNow()
 	}
 
-	value, ok := lru.Get("😂_🚀") 
+	value, ok := lru.Get("😂_🚀")
 	res := bytes.Compare(value, []byte("✔_🚗"))
-	if res != 0  {
+	if res != 0 {
 		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("✔_🚗"))
 		t.FailNow()
 	}
 
 }
-
 
 // Test that Set() overwrites values when called with an existing key
 func TestSetOverwriteLru(t *testing.T) {
@@ -423,32 +397,32 @@ func TestSetOverwriteLru(t *testing.T) {
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("key",[]byte("old"))
+	ok := lru.Set("key", []byte("old"))
 	if !ok {
 		t.Errorf("Failed to add  binding. Got %v, Expected %v", ok, true)
 		t.FailNow()
 	} else {
-		value, _ := lru.Get("key") 
-	res := bytes.Compare(value, []byte("old"))
-	if res != 0  {
-		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("old"))
-		t.FailNow()
-	}
+		value, _ := lru.Get("key")
+		res := bytes.Compare(value, []byte("old"))
+		if res != 0 {
+			t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("old"))
+			t.FailNow()
+		}
 	}
 
-	ok = lru.Set("key",[]byte("new"))
+	ok = lru.Set("key", []byte("new"))
 	if !ok {
 		t.Errorf("Failed to add  binding. Got %v, Expected %v", ok, true)
 		t.FailNow()
 	} else {
-		value, _ := lru.Get("key") 
-	res := bytes.Compare(value, []byte("new"))
-	if res != 0  {
-		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("new"))
-		t.FailNow()
-	}
+		value, _ := lru.Get("key")
+		res := bytes.Compare(value, []byte("new"))
+		if res != 0 {
+			t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("new"))
+			t.FailNow()
+		}
 
-}
+	}
 }
 
 // Test that Set() overwrites values when called with an existing key
@@ -457,41 +431,41 @@ func TestSetOverwriteStorageLru(t *testing.T) {
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("key",[]byte("old"))
+	ok := lru.Set("key", []byte("old"))
 	if !ok {
 		t.Errorf("Failed to add  binding. Got %v, Expected %v", ok, true)
 		t.FailNow()
 	} else {
-		value, _ := lru.Get("key") 
-	res := bytes.Compare(value, []byte("old"))
-	if res != 0  {
-		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("old"))
-		t.FailNow()
-	}
-	
-	if lru.RemainingStorage() != 1018 {
-		t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 1018)
-		t.FailNow()
-	}
+		value, _ := lru.Get("key")
+		res := bytes.Compare(value, []byte("old"))
+		if res != 0 {
+			t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("old"))
+			t.FailNow()
+		}
+
+		if lru.RemainingStorage() != 1018 {
+			t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 1018)
+			t.FailNow()
+		}
 	}
 
-	ok = lru.Set("key",[]byte("nw"))
+	ok = lru.Set("key", []byte("nw"))
 	if !ok {
 		t.Errorf("Failed to add  binding. Got %v, Expected %v", ok, true)
 		t.FailNow()
 	} else {
-		value, _ := lru.Get("key") 
-	res := bytes.Compare(value, []byte("nw"))
-	if res != 0  {
-		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("nw"))
-		t.FailNow()
-	}
-	if lru.RemainingStorage() != 1019 {
-		t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 1019)
-		t.FailNow()
-	}
+		value, _ := lru.Get("key")
+		res := bytes.Compare(value, []byte("nw"))
+		if res != 0 {
+			t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("nw"))
+			t.FailNow()
+		}
+		if lru.RemainingStorage() != 1019 {
+			t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", lru.RemainingStorage(), 1019)
+			t.FailNow()
+		}
 
-}
+	}
 }
 
 // Check that Remove() prevents Get() from retrieving a binding
@@ -500,17 +474,17 @@ func TestRemovePreventGetLru(t *testing.T) {
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	ok := lru.Set("key",[]byte("value"))
+	ok := lru.Set("key", []byte("value"))
 	if !ok {
 		t.Errorf("Failed to add  binding. Got %v, Expected %v", ok, true)
 		t.FailNow()
 	} else {
-		value, _ := lru.Get("key") 
-	res := bytes.Compare(value, []byte("value"))
-	if res != 0  {
-		t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("value"))
-		t.FailNow()
-	}
+		value, _ := lru.Get("key")
+		res := bytes.Compare(value, []byte("value"))
+		if res != 0 {
+			t.Errorf("Fetched wrong value. Set  Got %v, Expected %v", value, []byte("value"))
+			t.FailNow()
+		}
 	}
 
 	_, ok = lru.Remove("key")
@@ -518,11 +492,11 @@ func TestRemovePreventGetLru(t *testing.T) {
 		t.Errorf("Failed to remove  binding. Got %v, Expected %v", ok, true)
 		t.FailNow()
 	} else {
-		_, ok := lru.Get("key") 
-	if ok  {
-		t.Errorf("Fetched a removed value. Set  Got %v, Expected %v", ok, false)
-		t.FailNow()
-	}
+		_, ok := lru.Get("key")
+		if ok {
+			t.Errorf("Fetched a removed value. Set  Got %v, Expected %v", ok, false)
+			t.FailNow()
+		}
 	}
 
 }
@@ -538,7 +512,7 @@ func TestRemoveStorage(t *testing.T) {
 	lru.Set("__2", []byte("__2"))
 	lru.Set("__3", []byte("__3"))
 	lru.Remove("__0")
-	
+
 	//len
 	len := lru.Len()
 	if len != 3 {
@@ -562,7 +536,6 @@ func TestRemoveStorage(t *testing.T) {
 	}
 }
 
-
 // Check that Stats() returns correct values when there are mixed cache hits and misses
 func TestStatsLru(t *testing.T) {
 	capacity := 1024
@@ -571,7 +544,7 @@ func TestStatsLru(t *testing.T) {
 
 	lru.Set("____1", []byte("____1"))
 	_, ok := lru.Get("____1")
-	
+
 	if !ok {
 		t.Errorf("Failed to fetch  binding. Got %v, Expected %v", ok, true)
 		t.FailNow()
@@ -598,102 +571,68 @@ func TestStatsLru(t *testing.T) {
 
 }
 
-
-// NewLru(1024) &LRU{}                                             ...ok
-//      Len() 0                                                  ...ok
-// Set("____1",'____1') true                                               ...ok
-// Get("____1") cache_hit:<'____1'>                                ...ok
-// Get("miss") cache_miss                                         ...ok
-//    Stats() &{Hits:1_Misses:1}                                 ...ok
-// Set("____2",'____2') true                                               ...ok
-// Get("____2") cache_hit:<'____2'>                                ...ok
-// Get("miss") cache_miss#01                                      ...ok
-//    Stats() &{Hits:2_Misses:2}                                 ...ok
-// Set("____3",'____3') true                                               ...ok
-// Get("____3") cache_hit:<'____3'>                                ...ok
-// Get("miss") cache_miss#02                                      ...ok
-//    Stats() &{Hits:3_Misses:3}                                 ...ok
-
-
-func TestLRU(t *testing.T) {
-	capacity := 64
+// Check that Remove() works as expected on bindings whose values have been overwritten
+func TestRemoveOverwritten(t *testing.T) {
+	capacity := 1024
 	lru := NewLru(capacity)
 	checkCapacity(t, lru, capacity)
 
-	for i := 0; i < 15; i++ {
-		key := fmt.Sprintf("key%d", i)
-		val := []byte(key)
-		ok := lru.Set(key, val)
-		if !ok {
-			t.Errorf("Failed to add binding with key: %s", key)
-			t.FailNow()
-		}
-
-		res, _ := lru.Get(key)
-		if !bytesEqual(res, val) {
-			t.Errorf("Wrong value %s for binding with key: %s", res, key)
-			t.FailNow()
-		}
+	lru.Set("key", []byte("old"))
+	lru.Set("key", []byte("newval"))
+	lru.Remove("key")
+	_, ok := lru.Get("key")
+	if ok {
+		t.Errorf("Failed to remove binding with key: 'key'. Got %v, Expected %v", ok, false)
+		t.FailNow()
 	}
 
-	fmt.Println("TEST 52")
-	fifo2 := NewLru(100)
-	fifo2.Set("____0", []byte("____0"))
-	fifo2.Set("____1", []byte("____1"))
-	fifo2.Set("____2", []byte("____2"))
-	fifo2.Set("____3", []byte("____3"))
-	fifo2.Set("____4", []byte("____4"))
-	fifo2.Set("____5", []byte("____5"))
-	fifo2.Set("____6", []byte("____6"))
-	fifo2.Set("____7", []byte("____7"))
-	fifo2.Set("____8", []byte("____8"))
-	fifo2.Set("____9", []byte("____9"))
-	fifo2.Set("____10", []byte("____a"))
-	fmt.Println("length", fifo2.Len())
-	fmt.Println("remainingcapacity", fifo2.RemainingStorage())
-	fmt.Println(fifo2.Get("____0"))
-
-	// fmt.Println("fifo2 capacity = ", fifo2.capacity)
-	// fifo2.Set("12345", []byte("12345"))
-	// fmt.Println("remainingCap Before inserting = ", fifo2.capacity-fifo2.currentlyUsedCapacity)
-
-	// fifo2.Set("123", []byte("123"))
-	// fmt.Println("length", fifo2.Len())
-
-	// fmt.Println("remainingCap After inserting = ", fifo2.capacity-fifo2.currentlyUsedCapacity)
-
-	// fmt.Println("GET 0 FROM END OF LIST")
-	// ind := 0
-	// key := fmt.Sprintf("key%d", ind)
-	// val := []byte(key)
-	// res, _ := lru.Get(key)
-	// if !bytesEqual(res, val) {
-	// 	t.Errorf("Wrong value %s for binding with key: %s", res, key)
-	// 	t.FailNow()
-	// }
-
-	// fmt.Println("GET 3 FROM MIDDLE OF LIST")
-	// ind = 3
-	// key = fmt.Sprintf("key%d", ind)
-	// val = []byte(key)
-	// res, _ = lru.Get(key)
-	// if !bytesEqual(res, val) {
-	// 	t.Errorf("Wrong value %s for binding with key: %s", res, key)
-	// 	t.FailNow()
-	// }
-
-	// fmt.Println("IAN TESTING CAPACITY")
-	// fmt.Println("usedCap Before inserting = ", lru.currentlyUsedCapacity)
-	// fmt.Println("remainingCap Before inserting = ", lru.capacity-lru.currentlyUsedCapacity)
-	// lru.Set("H", []byte("hh"))
-	// fmt.Println("usedCap after inserting = ", lru.currentlyUsedCapacity)
-	// lru.Set("H", []byte("nn"))
-	// fmt.Println("usedCap after inserting duplicate same size = ", lru.currentlyUsedCapacity)
-	// lru.Set("H", []byte("h"))
-	// fmt.Println("usedCap after inserting duplicate smaller = ", lru.currentlyUsedCapacity)
-	// lru.Set("H", []byte("hhh"))
-	// fmt.Println("usedCap after inserting duplicate bigger = ", lru.currentlyUsedCapacity)
 }
+
+// Check that Remove() has no effect when called on an empty LRU
+func TestRemoveEmpty(t *testing.T) {
+	capacity := 1024
+	lru := NewLru(capacity)
+	checkCapacity(t, lru, capacity)
+
+	
+	_, ok := lru.Remove("key")
+	if ok {
+		t.Errorf("Removed empty binding. Got %v, Expected %v", ok, false)
+		t.FailNow()
+	}
+	_, ok = lru.Remove("foo")
+	if ok {
+		t.Errorf("Removed empty binding. Got %v, Expected %v", ok, false)
+		t.FailNow()
+	}
+	_, ok = lru.Remove("bar")
+	if ok {
+		t.Errorf("Removed empty binding. Got %v, Expected %v", ok, false)
+		t.FailNow()
+	}
+}
+
+// Attempt to Remove() a binding that has already been removed
+func TestRemoveRemoved(t *testing.T) {
+	capacity := 1024
+	lru := NewLru(capacity)
+	checkCapacity(t, lru, capacity)
+
+	lru.Set("key", []byte("value"))
+	_, ok := lru.Remove("key")
+	if !ok {
+		t.Errorf("Failed to remove binding. Got %v, Expected %v", ok, true)
+		t.FailNow()
+	}
+	_, ok = lru.Remove("key")
+	if ok {
+		t.Errorf("Removed removed binding. Got %v, Expected %v", ok, false)
+		t.FailNow()
+	}
+
+}
+
+
 
 func TestLRU_Peek(t *testing.T) {
 	capacity := 64
