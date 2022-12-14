@@ -48,75 +48,26 @@ func (arc *ARC) Get(key string) (value []byte, ok bool) {
 	if val, ok := arc.t1.Get(key); ok {
 		arc.t1.Remove(key)
 		arc.t2.Set(key, val)
+		arc.stats.Hits += 1
 		return val, ok
 	}
 
-	val_t2, ok_t2 := arc.t2.Get(key)
+	val, ok := arc.t2.Get(key)
 	if ok {
-		return val_t2, ok_t2
+		arc.stats.Hits += 1
+	} else {
+		arc.stats.Misses += 1
 	}
 
 	if _, ok := arc.b1.Peek(key); ok {
-		change := 1
-		if arc.b2.Len() > arc.b1.Len() {
-			change = (arc.b2.Len()) / (arc.b1.Len())
-		}
-		updated_p := arc.p + change
-		if updated_p > (arc.capacity) {
-			arc.p = arc.capacity
-		} else {
-			arc.p = updated_p
-		}
-		arc.Replace(key)
-
-		// move key-value pair from b1 into t2
-		if val, ok := arc.b1.Remove(key); ok {
-			arc.t2.Set(key, val)
-		}
+		arc.stats.B1Hits += 1
 	}
 
-	// If key is part of ghost entries recently-evicted from frequently-used list,
-	// adjust dynamic preference towards t1 v t2 in favour of t2, because client's
-	// usage shows preference for frequently-used entries
 	if _, ok := arc.b2.Peek(key); ok {
-		change := 1
-		if arc.b2.Len() > arc.b1.Len() {
-			change = (arc.b2.Len()) / (arc.b1.Len())
-		}
-		updated_p := arc.p - change
-		if updated_p < 0 {
-			arc.p = 0
-		} else {
-			arc.p = updated_p
-		}
-		arc.Replace(key)
-
-		// move key-value pair from b2 into t2
-		if val, ok := arc.b2.Remove(key); ok {
-			arc.t2.Set(key, val)
-		}
+		arc.stats.B2Hits += 1
 	}
 
-	if arc.t1.Len()+arc.b1.Len() == arc.capacity {
-		if arc.t1.Len() < arc.capacity {
-			arc.b1.Evict()
-			arc.Replace(key)
-		} else {
-			arc.t1.Evict()
-		}
-	}
-
-	if arc.t1.Len()+arc.b1.Len() < arc.capacity {
-		total_cap := arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len()
-		if total_cap >= arc.capacity {
-			if total_cap == 2*arc.capacity {
-				arc.b2.Evict()
-			}
-		}
-	}
-
-	return val_t2, ok_t2
-
+	return val, ok
 }
 
 // Remove removes and returns the value associated with the given key, if it exists.
@@ -229,14 +180,16 @@ func (arc *ARC) Replace(key string) {
 	_, key_in_b2 := arc.b1.Peek(key)
 	t1_length := arc.t1.Len()
 	if (t1_length > 0) && (t1_length > arc.p || (t1_length == arc.p && key_in_b2)) {
-		key, val, ok := arc.t1.Evict()
+		key, ok := arc.t1.Evict()
+		emptyVal := make([]byte, 0)
 		if ok {
-			arc.b1.Set(key, val)
+			arc.b1.Set(key, emptyVal)
 		}
 	} else {
-		key, val, ok := arc.t2.Evict()
+		key, ok := arc.t2.Evict()
+		emptyVal := make([]byte, 0)
 		if ok {
-			arc.b2.Set(key, val)
+			arc.b2.Set(key, emptyVal)
 		}
 	}
 }

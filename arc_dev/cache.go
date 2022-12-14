@@ -2,6 +2,8 @@ package cache
 
 type Stats struct {
 	Hits   int
+	B1Hits int
+	B2Hits int
 	Misses int
 }
 
