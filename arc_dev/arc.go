@@ -45,22 +45,78 @@ func (arc *ARC) Peek(key string) (value []byte, ok bool) {
 // This operation counts as a "use" for that key-value pair
 // ok is true if a value was found and false otherwise.
 func (arc *ARC) Get(key string) (value []byte, ok bool) {
-
-	currMapping, ok := arc.t1.Peek(key)
-
-	// Check if the value is present in recently-used cache t1, if so
-	// then remove it from t1 and promote to frequently-used cache t2
-	if ok {
-		arc.t2.Set(key, currMapping)
+	if val, ok := arc.t1.Get(key); ok {
 		arc.t1.Remove(key)
-		return currMapping, ok
+		arc.t2.Set(key, val)
+		return val, ok
 	}
 
-	// Look for the value in frequently-used cache t2, if not found in t1
-	currMapping, ok = arc.t2.Get(key)
+	val_t2, ok_t2 := arc.t2.Get(key)
+	if ok {
+		return val_t2, ok_t2
+	}
 
-	// Return value and true if found, else null value for type and false
-	return currMapping, ok
+	if _, ok := arc.b1.Peek(key); ok {
+		change := 1
+		if arc.b2.Len() > arc.b1.Len() {
+			change = (arc.b2.Len()) / (arc.b1.Len())
+		}
+		updated_p := arc.p + change
+		if updated_p > (arc.capacity) {
+			arc.p = arc.capacity
+		} else {
+			arc.p = updated_p
+		}
+		arc.Replace(key)
+
+		// move key-value pair from b1 into t2
+		if val, ok := arc.b1.Remove(key); ok {
+			arc.t2.Set(key, val)
+		}
+	}
+
+	// If key is part of ghost entries recently-evicted from frequently-used list,
+	// adjust dynamic preference towards t1 v t2 in favour of t2, because client's
+	// usage shows preference for frequently-used entries
+	if _, ok := arc.b2.Peek(key); ok {
+		change := 1
+		if arc.b2.Len() > arc.b1.Len() {
+			change = (arc.b2.Len()) / (arc.b1.Len())
+		}
+		updated_p := arc.p - change
+		if updated_p < 0 {
+			arc.p = 0
+		} else {
+			arc.p = updated_p
+		}
+		arc.Replace(key)
+
+		// move key-value pair from b2 into t2
+		if val, ok := arc.b2.Remove(key); ok {
+			arc.t2.Set(key, val)
+		}
+	}
+
+	if arc.t1.Len()+arc.b1.Len() == arc.capacity {
+		if arc.t1.Len() < arc.capacity {
+			arc.b1.Evict()
+			arc.Replace(key)
+		} else {
+			arc.t1.Evict()
+		}
+	}
+
+	if arc.t1.Len()+arc.b1.Len() < arc.capacity {
+		total_cap := arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len()
+		if total_cap >= arc.capacity {
+			if total_cap == 2*arc.capacity {
+				arc.b2.Evict()
+			}
+		}
+	}
+
+	return val_t2, ok_t2
+
 }
 
 // Remove removes and returns the value associated with the given key, if it exists.
@@ -173,16 +229,14 @@ func (arc *ARC) Replace(key string) {
 	_, key_in_b2 := arc.b1.Peek(key)
 	t1_length := arc.t1.Len()
 	if (t1_length > 0) && (t1_length > arc.p || (t1_length == arc.p && key_in_b2)) {
-		key, ok := arc.t1.Evict()
+		key, val, ok := arc.t1.Evict()
 		if ok {
-			value := make([]byte, 0)
-			arc.b1.Set(key, value)
+			arc.b1.Set(key, val)
 		}
 	} else {
-		key, ok := arc.t2.Evict()
+		key, val, ok := arc.t2.Evict()
 		if ok {
-			value := make([]byte, 0)
-			arc.b2.Set(key, value)
+			arc.b2.Set(key, val)
 		}
 	}
 }
