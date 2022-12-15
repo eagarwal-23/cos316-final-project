@@ -10,8 +10,9 @@ package cache
 import (
 	"bytes"
 	"fmt"
+
+	//"math/rand"
 	"testing"
-	"math/rand"
 )
 
 func TestNewArc(t *testing.T) {
@@ -825,12 +826,42 @@ func TestAdaptiveArc(t *testing.T) {
 		}
 	}
 
-	fmt.Printf("%v\n", numItemsAdded)
+	//fmt.Printf("%v\n", numItemsAdded)
+	//fmt.Printf("%v\n", arc.currentlyUsedCapacity)
 
 	if arc.t1.Len() != numItemsAdded {
 		t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), numItemsAdded)
 		t.FailNow()
 	}
 
-	
+	// Randomly move 50 items to T2
+	movedNumber := numItemsAdded / 3
+	for i := 0; i < movedNumber; i++ {
+		key := fmt.Sprintf("key%d", i)
+		arc.Get(key)
+	}
+	if arc.capacity != 1024 {
+		t.Errorf("HAHA - you played yourself")
+	}
+
+	// make sure the items are successfully moved to t2
+	if arc.t2.Len() != movedNumber {
+		t.Errorf("Recently-used cache t2 has wrong length.  Got %v, Expected %v", arc.t2.Len(), movedNumber)
+		t.FailNow()
+	}
+	if arc.capacity != 1024 {
+		t.Errorf("HAHA - you played yourself")
+	}
+
+	fmt.Printf("UsedBefore: %v\n", arc.currentlyUsedCapacity)
+	for i := 200; i < 210; i++ {
+		key := fmt.Sprintf("key%d", i)
+		arc.Set(key, make([]byte, 0))
+		fmt.Printf("Used: %v\n", arc.currentlyUsedCapacity)
+	}
+	if arc.b1.Len() != 20 {
+		t.Errorf("Ghost cache b1 has wrong length.  Got %v, Expected %v", arc.b1.currentlyUsedCapacity, 20)
+		t.FailNow()
+	}
+
 }

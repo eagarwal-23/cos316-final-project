@@ -1,0 +1,13 @@
+size 1size 1size 1size 1size 1size 1size 1size 1size 1size 1size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 2size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3size 3panic: runtime error: index out of range [2] with length 2
+
+goroutine 85 [running]:
+cos316.princeton.edu/assignment3/cache.BenchmarkArc(0xc00016e000)
+	/Users/ijaccojwang/Desktop/COS 316/cos316-final-project/cache/performance_test.go:46 +0x358
+testing.(*B).runN(0xc00016e000, 0x1)
+	/usr/local/go/src/testing/benchmark.go:193 +0x102
+testing.(*B).run1.func1()
+	/usr/local/go/src/testing/benchmark.go:233 +0x59
+created by testing.(*B).run1
+	/usr/local/go/src/testing/benchmark.go:226 +0x9c
+exit status 2
+FAIL	cos316.princeton.edu/assignment3/cache	0.111s
