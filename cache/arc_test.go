@@ -120,18 +120,30 @@ func TestStorageArc(t *testing.T) {
 
 	for i := 0; i < 20; i++ {
 		remainingStorageBefore := arc.RemainingStorage()
+		fmt.Printf("REMAININGB4: %v\n", remainingStorageBefore)
 		key := fmt.Sprintf("key%d", i)
 		val := []byte(key)
+		fmt.Printf("EXPECTEDUSED: %v\n", len(key) + len(val))
 		ok := arc.Set(key, val)
+		fmt.Printf("VAL BEFORE``: %v", val)
+		if val, ok := arc.Peek(key); ok {
+			fmt.Printf("VAL AFTER: %v", val)
+		} else {
+			fmt.Printf("ALLS WELL THAT ENDS WELL TO END UP WITH YOU")
+		}
+		fmt.Printf("USEDCAP: %v\n", arc.currentlyUsedCapacity)
+		fmt.Printf("USEDCAP: %v\n", arc.t1.currentlyUsedCapacity)
+		fmt.Printf("USEDCAP: %v\n", arc.t2.currentlyUsedCapacity)
 		if !ok {
 			t.Errorf("Failed to add binding with key: %s", key)
 			t.FailNow()
 		}
 		remainingStorageAfter := arc.RemainingStorage()
+		fmt.Printf("USEDCAP: %v\n", arc.RemainingStorage())
 
-		expectedremainingStorageAfter := remainingStorageBefore - (len(key) + len(val))
-		if remainingStorageAfter != expectedremainingStorageAfter {
-			t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", remainingStorageAfter, expectedremainingStorageAfter)
+		expectedRemainingStorageAfter := remainingStorageBefore - (len(key) + len(val))
+		if remainingStorageAfter != expectedRemainingStorageAfter {
+			t.Errorf("RemainingStorage wrong after adding binding. Got %v, Expected %v", remainingStorageAfter, expectedRemainingStorageAfter)
 			t.FailNow()
 		}
 	}

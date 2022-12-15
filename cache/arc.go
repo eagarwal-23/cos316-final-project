@@ -178,12 +178,12 @@ func (arc *ARC) Set(key string, value []byte) bool {
 	// fmt.Println("total cap: ", arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity)
 	// fmt.Println("arc cap: ", arc.currentlyUsedCapacity)
 	if arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity == arc.currentlyUsedCapacity {
-		if arc.t1.currentlyUsedCapacity < arc.capacity {
+		if arc.t1.currentlyUsedCapacity < arc.currentlyUsedCapacity {
 			arc.b1.Evict()
 			arc.Replace(key)
 		} else {
 			arc.t1.Evict()
-			arc.updateCapacity()
+			//arc.updateCapacity()
 
 		}
 	}
