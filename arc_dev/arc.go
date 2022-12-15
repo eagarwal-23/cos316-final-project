@@ -103,8 +103,6 @@ func (arc *ARC) updateCapacity() {
 // to make room. Returns true if the binding was added successfully, else false.
 func (arc *ARC) Set(key string, value []byte) bool {
 
-	
-
 	// If the key is in recently-used cache t1, then promote it to t2
 	if _, ok := arc.t1.Peek(key); ok {
 		arc.t1.Remove(key)
@@ -167,18 +165,22 @@ func (arc *ARC) Set(key string, value []byte) bool {
 	// if not in any of the four
 	// if b1.Len() + t1.Len() = arc.capacity, then if b1 is not empty,
 	// delete from b1 & move key-value pair from t1 to b1
-	if arc.t1.Len()+arc.b1.Len() == arc.capacity {
-		if arc.t1.Len() < arc.capacity {
+	if arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity == arc.capacity {
+		// b1 is not empty
+		if arc.t1.cu
+		rrentlyUsedCapacity < arc.currentlyUsedCapacity {
 			arc.b1.Evict()
 			arc.Replace(key)
+			
+			// b1 is empty
 		} else {
 			arc.t1.Evict()
 		}
 	}
-	if arc.t1.Len()+arc.b1.Len() < arc.capacity {
-		total_cap := arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len()
-		if total_cap >= arc.capacity {
-			if total_cap == 2*arc.capacity {
+	if arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity < arc.capacity {
+		total_cap := arc.t1.currentlyUsedCapacity + arc.t2.currentlyUsedCapacity + arc.b1.currentlyUsedCapacity + arc.b2.currentlyUsedCapacity
+		if total_cap >= arc.currentlyUsedCapacity {
+			if total_cap == 2*arc.currentlyUsedCapacity {
 				arc.b2.Evict()
 			}
 		}

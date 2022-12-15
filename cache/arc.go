@@ -1,7 +1,5 @@
 package cache
 
-import "fmt"
-
 // An ARC is a fixed-size in-memory cache with least-recently-used eviction
 type ARC struct {
 	p        int // P is the dynamic preference towards t1 or t2
@@ -110,7 +108,7 @@ func (arc *ARC) Set(key string, value []byte) bool {
 
 	// If the key is in recently-used cache t1, then promote it to t2
 	if _, ok := arc.t1.Peek(key); ok {
-		fmt.Println("I AM SETTING: A")
+		// fmt.Println("I AM SETTING: A")
 		arc.t1.Remove(key)
 		arc.t2.Set(key, value)
 		arc.updateCapacity()
@@ -119,7 +117,7 @@ func (arc *ARC) Set(key string, value []byte) bool {
 
 	// If key is already in frequently-used cache t2, then update its corresponding value
 	if _, ok := arc.t2.Peek(key); ok {
-		fmt.Println("I AM SETTING: B")
+		// fmt.Println("I AM SETTING: B")
 		arc.t2.Set(key, value)
 		arc.updateCapacity()
 		return true
@@ -129,7 +127,7 @@ func (arc *ARC) Set(key string, value []byte) bool {
 	// adjust dynamic preference towards t1 v t2 in favour of t1, because client's
 	// usage shows preference for recently-used entries
 	if _, ok := arc.b1.Peek(key); ok {
-		fmt.Println("I AM SETTING: C")
+		// fmt.Println("I AM SETTING: C")
 		change := 1
 		if arc.b2.Len() > arc.b1.Len() {
 			change = (arc.b2.Len()) / (arc.b1.Len())
@@ -152,7 +150,7 @@ func (arc *ARC) Set(key string, value []byte) bool {
 	// adjust dynamic preference towards t1 v t2 in favour of t2, because client's
 	// usage shows preference for frequently-used entries
 	if _, ok := arc.b2.Peek(key); ok {
-		fmt.Println("I AM SETTING: D")
+		// fmt.Println("I AM SETTING: D")
 		change := 1
 		if arc.b2.Len() > arc.b1.Len() {
 			change = (arc.b2.Len()) / (arc.b1.Len())
@@ -171,12 +169,16 @@ func (arc *ARC) Set(key string, value []byte) bool {
 		arc.updateCapacity()
 	}
 
-	fmt.Println("I AM SETTING: E")
+	// fmt.Println("I AM SETTING: E")
 	// if not in any of the four
 	// if b1.Len() + t1.Len() = arc.capacity, then if b1 is not empty,
 	// delete from b1 & move key-value pair from t1 to b1
-	if arc.t1.Len()+arc.b1.Len() == arc.capacity {
-		if arc.t1.Len() < arc.capacity {
+	// fmt.Println("t1 cap: ", arc.t1.currentlyUsedCapacity)
+	// fmt.Println("b1 cap: ", arc.b1.currentlyUsedCapacity)
+	// fmt.Println("total cap: ", arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity)
+	// fmt.Println("arc cap: ", arc.currentlyUsedCapacity)
+	if arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity == arc.currentlyUsedCapacity {
+		if arc.t1.currentlyUsedCapacity < arc.capacity {
 			arc.b1.Evict()
 			arc.Replace(key)
 		} else {
@@ -185,8 +187,8 @@ func (arc *ARC) Set(key string, value []byte) bool {
 
 		}
 	}
-	if arc.t1.Len()+arc.b1.Len() < arc.capacity {
-		total_cap := arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len()
+	if arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity < arc.currentlyUsedCapacity {
+		total_cap := arc.t1.currentlyUsedCapacity + arc.t2.currentlyUsedCapacity + arc.b1.currentlyUsedCapacity + arc.b2.currentlyUsedCapacity
 		if total_cap >= arc.capacity {
 			if total_cap == 2*arc.capacity {
 				arc.b2.Evict()
@@ -200,9 +202,9 @@ func (arc *ARC) Set(key string, value []byte) bool {
 
 func (arc *ARC) Replace(key string) {
 	_, key_in_b2 := arc.b1.Peek(key)
-	t1_length := arc.t1.Len()
+	t1_length := arc.t1.currentlyUsedCapacity
 	if (t1_length > 0) && (t1_length > arc.p || (t1_length == arc.p && key_in_b2)) {
-		fmt.Println("I AM EVICTING")
+		// fmt.Println("I AM EVICTING")
 		key, ok := arc.t1.Evict()
 		emptyVal := make([]byte, 0)
 		if ok {
