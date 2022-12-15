@@ -10,8 +10,8 @@ package cache
 import (
 	"bytes"
 	"fmt"
-	"strconv"
 	"testing"
+	"math/rand"
 )
 
 func TestNewArc(t *testing.T) {
@@ -687,31 +687,150 @@ func TestPeekRecencyArc(t *testing.T) {
 
 // Ensures that keys on recentLRU that are re-accessed are properly moved to frequentLRU
 func TestGetMoveRecentToFrequentArc(t *testing.T) {
+	capacity := 256
+	arc := NewArc(capacity)
+
+	numItemsAdded := 0
+	itemsAdded := make([]string, 0)
+
+	// for i < capacity, try adding key-val pair until capacity is full
+	for i := 0; i < capacity; i++ {
+		key := fmt.Sprintf("key%d", i)
+		if arc.capacity > arc.currentlyUsedCapacity+len(key) {
+			arc.Set(key, make([]byte, 0))
+			itemsAdded = append(itemsAdded, key)
+			numItemsAdded++
+		}
+	}
+
+	if arc.t1.Len() != numItemsAdded {
+		t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), numItemsAdded)
+		t.FailNow()
+	}
+
+	if arc.t2.Len() != 0 {
+		t.Errorf("Recently-used cache t2 has wrong length.  Got %v, Expected %v", arc.t2.Len(), 0)
+		t.FailNow()
+	}
+
+	// Get should upgrade to t2
+	for _, key := range itemsAdded {
+		if _, ok := arc.Get(key); !ok {
+			t.Errorf("Missing key in cache: %v", key)
+			t.FailNow()
+		}
+	}
+
+	if arc.t1.Len() != 0 {
+		t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), 0)
+		t.FailNow()
+	}
+
+	if arc.t2.Len() != numItemsAdded {
+		t.Errorf("Recently-used cache t2 has wrong length.  Got %v, Expected %v", arc.t2.Len(), numItemsAdded)
+		t.FailNow()
+	}
+
+	// Get should get from t2
+	for _, key := range itemsAdded {
+		if _, ok := arc.Get(key); !ok {
+			t.Errorf("Missing key in cache: %v", key)
+			t.FailNow()
+		}
+	}
+
+	if arc.t1.Len() != 0 {
+		t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), 0)
+		t.FailNow()
+	}
+
+	if arc.t2.Len() != numItemsAdded {
+		t.Errorf("Recently-used cache t2 has wrong length.  Got %v, Expected %v", arc.t2.Len(), numItemsAdded)
+		t.FailNow()
+	}
+}
+
+func TestAddMoveRecentToFrequentArc(t *testing.T) {
+	capacity := 256
+	arc := NewArc(capacity)
+
+	numItemsAdded := 0
+	itemsAdded := make([]string, 0)
+
+	// for i < capacity, try adding key-val pair until capacity is full
+	for i := 0; i < capacity; i++ {
+		key := fmt.Sprintf("key%d", i)
+		if arc.capacity > arc.currentlyUsedCapacity+len(key) {
+			arc.Set(key, make([]byte, 0))
+			itemsAdded = append(itemsAdded, key)
+			numItemsAdded++
+		}
+	}
+
+	if arc.t1.Len() != numItemsAdded {
+		t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), numItemsAdded)
+		t.FailNow()
+	}
+
+	if arc.t2.Len() != 0 {
+		t.Errorf("Recently-used cache t2 has wrong length.  Got %v, Expected %v", arc.t2.Len(), 0)
+		t.FailNow()
+	}
+
+	// Add should upgrade to t2
+	for _, key := range itemsAdded {
+		arc.Set(key, make([]byte, 0))
+	}
+
+	if arc.t1.Len() != 0 {
+		t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), 0)
+		t.FailNow()
+	}
+
+	if arc.t2.Len() != numItemsAdded {
+		t.Errorf("Recently-used cache t2 has wrong length.  Got %v, Expected %v", arc.t2.Len(), numItemsAdded)
+		t.FailNow()
+	}
+
+	// For next set, should remain in t2
+	for _, key := range itemsAdded {
+		arc.Set(key, make([]byte, 0))
+	}
+
+	if arc.t1.Len() != 0 {
+		t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), 0)
+		t.FailNow()
+	}
+
+	if arc.t2.Len() != numItemsAdded {
+		t.Errorf("Recently-used cache t2 has wrong length.  Got %v, Expected %v", arc.t2.Len(), numItemsAdded)
+		t.FailNow()
+	}
+}
+
+func TestAdaptiveArc(t *testing.T) {
 	capacity := 1024
 	arc := NewArc(capacity)
 
-	for i := 0; i < 256; i++ {
-		//remainingStorageBefore := arc.RemainingStorage()
+	numItemsAdded := 0
+	itemsAdded := make([]string, 0)
+
+	// for i < capacity, try adding key-val pair until capacity is full
+	for i := 0; i < capacity; i++ {
 		key := fmt.Sprintf("key%d", i)
-		arc.Set(key, make([]byte, 0))
-		fmt.Printf("size %v", len(strconv.Itoa(i)) )
+		if arc.capacity > arc.currentlyUsedCapacity+len(key) {
+			arc.Set(key, make([]byte, 0))
+			itemsAdded = append(itemsAdded, key)
+			numItemsAdded++
+		}
 	}
 
-	// if arc.t1.Len() != 256 {
-	// 	t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), 256)
-	// 	t.FailNow()
-	// }
+	fmt.Printf("%v\n", numItemsAdded)
 
-	// if arc.t2.Len() != 0 {
-	// 	t.Errorf("Recently-used cache t2 has wrong length: %v", arc.t2.Len())
-	// 	t.FailNow()
-	// }
+	if arc.t1.Len() != numItemsAdded {
+		t.Errorf("Recently-used cache t1 has wrong length.  Got %v, Expected %v", arc.t1.Len(), numItemsAdded)
+		t.FailNow()
+	}
 
-	// arc.Set("a", make([]byte, 0))
-	// if arc.t1.Len() != 1 {
-	// 	t.Errorf("Recently-used cache t1 has wrong length: %v", arc.t1.Len())
-	// 	t.FailNow()
-	// }
-
-
+	
 }
