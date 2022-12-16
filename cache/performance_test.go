@@ -28,7 +28,7 @@ func getRand(tb testing.TB) int64 {
 
 // Small benchmark test to compare arc
 func BenchmarkArc(b *testing.B) {
-	capacities := []int{10240} //160, 320, 640, 1280, 2560, 5120, 10240, 20480}
+	capacities := []int{20480} //160, 320, 640, 1280, 2560, 5120, 10240, 20480}
 
 	for i := range capacities {
 		capacity := capacities[i]
@@ -62,7 +62,7 @@ func BenchmarkArc(b *testing.B) {
 }
 
 func BenchmarkLru(b *testing.B) {
-	capacities := []int{10240} //160, 320, 640, 1280, 2560, 5120, 10240, 20480}
+	capacities := []int{20480} //160, 320, 640, 1280, 2560, 5120, 10240, 20480}
 
 	for i := range capacities {
 		capacity := capacities[i]

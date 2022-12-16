@@ -1,5 +1,7 @@
 package cache
 
+//import "fmt"
+
 // An ARC is a fixed-size in-memory cache with least-recently-used eviction
 type ARC struct {
 	p        int // P is the dynamic preference towards t1 or t2
@@ -102,7 +104,8 @@ func (arc *ARC) updateCapacity() {
 // Set associates the given value with the given key, possibly evicting values
 // to make room. Returns true if the binding was added successfully, else false.
 func (arc *ARC) Set(key string, value []byte) bool {
-	if len(key)+len(value) > arc.capacity {
+	currObjectSize := len(key) + len(value)
+	if currObjectSize > arc.capacity {
 		return false
 	}
 
@@ -123,14 +126,18 @@ func (arc *ARC) Set(key string, value []byte) bool {
 		return true
 	}
 
+	// if len(key)+len(value) > arc.RemainingStorage() {
+	// 	return false
+	// }
+
 	// If key is part of ghost entries recently-evicted from recently-used list,
 	// adjust dynamic preference towards t1 v t2 in favour of t1, because client's
 	// usage shows preference for recently-used entries
 	if _, ok := arc.b1.Peek(key); ok {
 		// fmt.Println("I AM SETTING: C")
 		change := 1
-		if arc.b2.Len() > arc.b1.Len() {
-			change = (arc.b2.Len()) / (arc.b1.Len())
+		if arc.b2.currentlyUsedCapacity > arc.b1.currentlyUsedCapacity {
+			change = (arc.b2.currentlyUsedCapacity) / (arc.b1.currentlyUsedCapacity)
 		}
 		updated_p := arc.p + change
 		if updated_p > (arc.capacity) {
@@ -138,7 +145,9 @@ func (arc *ARC) Set(key string, value []byte) bool {
 		} else {
 			arc.p = updated_p
 		}
-		arc.Replace(key)
+		for arc.capacity < arc.currentlyUsedCapacity+currObjectSize {
+			arc.Replace(key)
+		}
 
 		// move key-value pair from b1 into t2
 		arc.b1.Remove(key)
@@ -152,8 +161,8 @@ func (arc *ARC) Set(key string, value []byte) bool {
 	if _, ok := arc.b2.Peek(key); ok {
 		// fmt.Println("I AM SETTING: D")
 		change := 1
-		if arc.b2.Len() > arc.b1.Len() {
-			change = (arc.b2.Len()) / (arc.b1.Len())
+		if arc.b2.currentlyUsedCapacity > arc.b1.currentlyUsedCapacity {
+			change = (arc.b2.currentlyUsedCapacity) / (arc.b1.currentlyUsedCapacity)
 		}
 		updated_p := arc.p - change
 		if updated_p < 0 {
@@ -161,7 +170,9 @@ func (arc *ARC) Set(key string, value []byte) bool {
 		} else {
 			arc.p = updated_p
 		}
-		arc.Replace(key)
+		for arc.capacity < arc.currentlyUsedCapacity+currObjectSize {
+			arc.Replace(key)
+		}
 
 		// move key-value pair from b2 into t2
 		arc.b2.Remove(key)
@@ -169,7 +180,7 @@ func (arc *ARC) Set(key string, value []byte) bool {
 		arc.updateCapacity()
 	}
 
-	// fmt.Println("I AM SETTING: E")
+	//fmt.Println("I AM SETTING: E")
 	// if not in any of the four
 	// if b1.Len() + t1.Len() = arc.capacity, then if b1 is not empty,
 	// delete from b1 & move key-value pair from t1 to b1
@@ -177,24 +188,34 @@ func (arc *ARC) Set(key string, value []byte) bool {
 	// fmt.Println("b1 cap: ", arc.b1.currentlyUsedCapacity)
 	// fmt.Println("total cap: ", arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity)
 	// fmt.Println("arc cap: ", arc.currentlyUsedCapacity)
-	if arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity == arc.currentlyUsedCapacity {
-		if arc.t1.currentlyUsedCapacity < arc.currentlyUsedCapacity {
+	if arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity == arc.capacity {
+		//fmt.Println("BLAAaaaaaaaaaaaa")
+		if arc.t1.currentlyUsedCapacity < arc.capacity {
+			//fmt.Println("BLAAaaaaaaaaaaaa22")
 			arc.b1.Evict()
-			arc.Replace(key)
+			for arc.capacity < arc.currentlyUsedCapacity+currObjectSize {
+				arc.Replace(key)
+			}
 		} else {
 			arc.t1.Evict()
+			//fmt.Println("BLAAaaaaaaaaaaaa33")
 			//arc.updateCapacity()
 
 		}
 	}
-	if arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity < arc.currentlyUsedCapacity {
+	if arc.t1.currentlyUsedCapacity+arc.b1.currentlyUsedCapacity < arc.capacity {
 		total_cap := arc.t1.currentlyUsedCapacity + arc.t2.currentlyUsedCapacity + arc.b1.currentlyUsedCapacity + arc.b2.currentlyUsedCapacity
 		if total_cap >= arc.capacity {
 			if total_cap == 2*arc.capacity {
 				arc.b2.Evict()
+				for arc.capacity < arc.currentlyUsedCapacity+currObjectSize {
+					arc.Replace(key)
+				}
 			}
 		}
 	}
+
+	//fmt.Println("ACTUAL SET")
 	arc.t1.Set(key, value)
 	arc.updateCapacity()
 	return true

@@ -145,6 +145,13 @@ func TestStorageLru(t *testing.T) {
 		}
 	}
 
+	// fmt.Printf("UsedBefore: %v\n", arc.capacity)
+	// for i := 200; i < 210; i++ {
+	// 	key := fmt.Sprintf("key%d", i)
+	// 	arc.Set(key, make([]byte, 0))
+	// 	fmt.Printf("CurrentlyUsed: %v\n", arc.currentlyUsedCapacity)
+	// }
+
 }
 
 // Check that Set() adds bindings to a 'full' LRU by evicting old ones
@@ -673,4 +680,3 @@ func TestLRU_Peek(t *testing.T) {
 	}
 
 }
-
