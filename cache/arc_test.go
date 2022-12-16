@@ -857,17 +857,5 @@ func TestAdaptiveArc(t *testing.T) {
 		key := fmt.Sprintf("key%d", i)
 		arc.Set(key, make([]byte, 0))
 	}
-	// for i := 200; i < 210; i++ {
-	// 	key := fmt.Sprintf("key%d", i)
-	// 	_, ok := arc.Get(key)
-	// 	if !ok {
-	// 		t.Errorf("I'M NOT IN THE CACHE:, %v", key)
-	// 		t.FailNow()
-	// 	}
-	// }
-	// if arc.b1.Len() != 20 {
-	// 	t.Errorf("Ghost cache b1 has wrong length.  Got %v, Expected %v", arc.b1.currentlyUsedCapacity, 20)
-	// 	t.FailNow()
-	// }
 
 }
