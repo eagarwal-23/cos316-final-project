@@ -202,6 +202,8 @@ func (arc *ARC) Set(key string, value []byte) bool {
 	return true
 }
 
+// Implements the ARC replacement policy which decides whether to favor eviction
+// from t1 or t2.
 func (arc *ARC) Replace(key string) {
 	_, key_in_b2 := arc.b1.Peek(key)
 	t1_length := arc.t1.currentlyUsedCapacity
@@ -221,6 +223,7 @@ func (arc *ARC) Replace(key string) {
 	arc.updateCapacity()
 }
 
+// Empties the ARC cache instance.
 func (arc *ARC) Empty() {
 	arc.t1.Empty()
 	arc.t2.Empty()

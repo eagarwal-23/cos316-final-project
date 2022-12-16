@@ -686,7 +686,7 @@ func TestPeekRecencyArc(t *testing.T) {
 
 }
 
-// Ensures that keys on recentLRU that are re-accessed are properly moved to frequentLRU
+// Tests that calling Get on an entry already in T1 moves it to T2.
 func TestGetMoveRecentToFrequentArc(t *testing.T) {
 	capacity := 256
 	arc := NewArc(capacity)
@@ -751,6 +751,7 @@ func TestGetMoveRecentToFrequentArc(t *testing.T) {
 	}
 }
 
+// Tests that calling Add on an entry already in T1 moves it to T2.
 func TestAddMoveRecentToFrequentArc(t *testing.T) {
 	capacity := 256
 	arc := NewArc(capacity)
@@ -809,6 +810,8 @@ func TestAddMoveRecentToFrequentArc(t *testing.T) {
 	}
 }
 
+// Tests that ARC currently adjusts the sizes of T1 and T2 based on resource use and
+// access patterns.
 func TestAdaptiveArc(t *testing.T) {
 	capacity := 10240
 	arc := NewArc(capacity)
